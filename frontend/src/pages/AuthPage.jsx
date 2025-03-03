@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { toast } from "react-toastify"; 
-import "react-toastify/dist/ReactToastify.css"; 
+import { toast } from "react-toastify";
 
-const AuthPage = () => {
+const AuthPage = ({ setIsAuthenticated }) => {  
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,7 +14,7 @@ const AuthPage = () => {
 
   useEffect(() => {
     const auth = localStorage.getItem("auth");
-    if (auth === "true") navigate("/home");
+    if (auth === "true") navigate("/home");  
   }, [navigate]);
 
   const handleAuth = async () => {
@@ -36,18 +35,17 @@ const AuthPage = () => {
         ? "http://localhost:5000/api/users/login"
         : "http://localhost:5000/api/users/new";
 
-      const payload = isLogin
-        ? { email, password }
-        : { name, email, password };
+      const payload = isLogin ? { email, password } : { name, email, password };
 
       const { data } = await axios.post(endpoint, payload, { withCredentials: true });
 
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("auth", "true");
+      setIsAuthenticated(true); 
 
-      toast.success(isLogin ? "Login successful!" : "Registration successful! 🎉");
+      toast.success(isLogin ? "Login successful!" : "Registration successful!");
 
-      setTimeout(() => navigate("/home", { replace: true }), 1500);
+      setTimeout(() => navigate("/home", { replace: true }), 500);
     } catch (error) {
       toast.error(error.response?.data?.message || "Authentication failed!");
     } finally {
@@ -100,7 +98,7 @@ const AuthPage = () => {
 
         <button
           className={`w-full p-2 rounded text-white ${
-            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 cursor-pointer"
           }`}
           onClick={handleAuth}
           disabled={loading}
@@ -110,10 +108,7 @@ const AuthPage = () => {
 
         <p className="text-center mt-2 text-sm">
           {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-          <span
-            className="text-blue-500 cursor-pointer"
-            onClick={() => setIsLogin(!isLogin)}
-          >
+          <span className="text-blue-500 cursor-pointer" onClick={() => setIsLogin(!isLogin)}>
             {isLogin ? "Register" : "Login"}
           </span>
         </p>

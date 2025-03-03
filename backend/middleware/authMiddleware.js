@@ -1,33 +1,26 @@
 import { User } from "../models/User.js";
 import jwt from "jsonwebtoken";
+import asyncHandler from "express-async-handler";
+import { ErrorHandler } from "../utils/errorHandler.js";
 
-export const isAuthenticated = async (req, res, next) => {
-    try {
-        const token = req.cookies.token; 
+export const isAuthenticated = asyncHandler(async (req, res, next) => {
+    const token = req.cookies.token;
 
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized: Please log in first",
-            });
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded._id).select("-password");
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
-
-        req.user = user;
-        next();
-    } catch (error) {
-        return res.status(401).json({
-            success: false,
-            message: "Unauthorized: Invalid or expired token",
-        });
+    if (!token) {
+        throw new ErrorHandler("Unauthorized: Please log in first", 401);
     }
-};
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded._id).select("-password");
+
+    if (!user) {
+        throw new ErrorHandler("User not found", 404);
+    }
+
+    req.user = user;
+    next();
+});
+
+
+
+

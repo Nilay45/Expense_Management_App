@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Category from "./models/Category.js";
+import Subcategory from "./models/SubCategory.js";
 import PaymentMethod from "./models/PaymentMethod.js";
 import connectDB from "./config/db.js";
 
@@ -9,41 +10,48 @@ connectDB();
 
 const seedDatabase = async () => {
   try {
-    // Clear existing data
     await Category.deleteMany();
+    await Subcategory.deleteMany();
     await PaymentMethod.deleteMany();
 
-    // Seed categories with subcategories
-    const categories = [
-      {
-        name: "Salary",
-        type: "Income",
-        subcategories: [{ name: "Monthly Salary" }, { name: "Bonus" }, { name: "Freelancing" }],
-      },
-      {
-        name: "Business",
-        type: "Income",
-        subcategories: [{ name: "Sales Revenue" }, { name: "Investments" }],
-      },
-      {
-        name: "Food",
-        type: "Expense",
-        subcategories: [{ name: "Groceries" }, { name: "Restaurants" }, { name: "Fast Food" }],
-      },
-      {
-        name: "Transportation",
-        type: "Expense",
-        subcategories: [{ name: "Fuel" }, { name: "Public Transport" }, { name: "Taxi" }],
-      },
-      {
-        name: "Entertainment",
-        type: "Expense",
-        subcategories: [{ name: "Movies" }, { name: "Music" }, { name: "Gaming" }],
-      },
+    console.log("Existing data cleared...");
+
+    const categoriesData = [
+      { name: "Salary" },
+      { name: "Business" },
+      { name: "Investment" },
+      { name: "Food" },
+      { name: "Transportation" },
+      { name: "Entertainment" },
     ];
 
+    const categories = await Category.insertMany(categoriesData);
+    console.log("Categories seeded...");
+
+    const categoryMap = {};
+    categories.forEach((cat) => {
+      categoryMap[cat.name] = cat._id;
+    });
+
+    // Seed subcategories (some mapped to multiple categories)
+    const subcategoriesData = [
+      { name: "Bonus", categories: [categoryMap["Salary"], categoryMap["Business"]] },
+      { name: "Investments", categories: [categoryMap["Business"], categoryMap["Investment"]] },
+      { name: "Monthly Salary", categories: [categoryMap["Salary"]] },
+      { name: "Freelancing", categories: [categoryMap["Business"]] },
+      { name: "Groceries", categories: [categoryMap["Food"]] },
+      { name: "Restaurants", categories: [categoryMap["Food"]] },
+      { name: "Fuel", categories: [categoryMap["Transportation"]] },
+      { name: "Public Transport", categories: [categoryMap["Transportation"]] },
+      { name: "Movies", categories: [categoryMap["Entertainment"]] },
+      { name: "Gaming", categories: [categoryMap["Entertainment"]] },
+    ];
+
+    await Subcategory.insertMany(subcategoriesData);
+    console.log("Subcategories seeded...");
+
     // Seed payment methods
-    const paymentMethods = [
+    const paymentMethodsData = [
       { name: "Cash" },
       { name: "Credit Card" },
       { name: "Bank Transfer" },
@@ -51,8 +59,8 @@ const seedDatabase = async () => {
       { name: "Net Banking" },
     ];
 
-    await Category.insertMany(categories);
-    await PaymentMethod.insertMany(paymentMethods);
+    await PaymentMethod.insertMany(paymentMethodsData);
+    console.log("Payment methods seeded...");
 
     console.log("Database Seeded Successfully!");
     process.exit();

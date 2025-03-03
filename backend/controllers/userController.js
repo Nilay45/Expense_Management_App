@@ -1,65 +1,48 @@
 import { User } from "../models/User.js";
 import bcrypt from "bcrypt";
 import { sendCookie } from "../utils/generateToken.js";
-import { ErrorHandler } from "../middleware/errorMiddleware.js"
+import { ErrorHandler } from "../utils/errorHandler.js";
+import asyncHandler from "express-async-handler";
 
+export const register = asyncHandler(async (req, res, next) => {
+    const { name, email, password } = req.body;
 
-export const register = async (req, res, next) => {
-    try {
-        const { name, email, password } = req.body;
+    let user = await User.findOne({ email });
+    if (user) throw new ErrorHandler("User Already Exists", 400);
 
-        let user = await User.findOne({ email });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user = await User.create({ name, email, password: hashedPassword });
 
-        if (user) return next(new ErrorHandler("User Already Exist", 400));
+    sendCookie(user, res, "Registered Successfully", 201);
+});
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+export const login = asyncHandler(async (req, res, next) => {
+    const { email, password } = req.body;
 
-        user = await User.create({ name, email, password: hashedPassword });
+    let user = await User.findOne({ email }).select("+password");
+    if (!user) throw new ErrorHandler("Invalid Email or Password", 400);
 
-        sendCookie(user, res, "Registerd Successfully", 201);
-    } catch (error) {
-        next(error);
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new ErrorHandler("Invalid Email or Password", 400);
 
-};
-
-export const login = async (req, res, next) => {
-    try {
-        const { email, password } = req.body; // 
-
-        let user = await User.findOne({ email }).select("+password");
-        if (!user) return next(new ErrorHandler("Invalid Email or Password", 400));
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return next(new ErrorHandler("Invalid Email or Password", 400));
-
-        sendCookie(user, res, `Welcome back, ${user.name}`, 200);
-    } catch (error) {
-        next(error);
-    }
-};
+    sendCookie(user, res, `Welcome back, ${user.name}`, 200);
+});
 
 export const getMyProfile = (req, res) => {
-
     res.status(200).json({
         success: true,
-        user: req.user
+        user: req.user,
     });
 };
 
 export const logout = (req, res) => {
-
-    res
-        .status(200)
-        .cookie("token", "", { 
-            expires: new Date(Date.now()),
-            sameSite: process.env.NODE_ENV === "Development" ? "lax" : "none",
-            secure: process.env.NODE_ENV === "Development" ? false : true,
+    res.status(200)
+        .clearCookie("token", {
+            httpOnly: true, 
+            secure: process.env.NODE_ENV !== "development", 
         })
         .json({
             success: true,
-            user: req.user,
+            message: "Logged out successfully",
         });
 };
-
-

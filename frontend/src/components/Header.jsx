@@ -2,39 +2,45 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Wallet } from "lucide-react";
+import { toast } from "react-toastify";
 
-const Header = () => {
+const Header = ({ isAuthenticated, setIsAuthenticated }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      await axios.get("http://localhost:5000/api/users/logout"); // Using GET instead of POST
-      localStorage.removeItem("auth"); // Remove auth token
-      localStorage.removeItem("user"); // Clear user details
-      navigate("/", { replace: true }); // Redirect to login page
+      await axios.post("http://localhost:5000/api/users/logout", { withCredentials: true });
+
+      localStorage.removeItem("auth");
+      localStorage.removeItem("user");
+      setIsAuthenticated(false);
+
+      toast.success("Logged out successfully!");
+      setTimeout(() => navigate("/", { replace: true }), 300);
     } catch (error) {
+      toast.error("Logout failed. Please try again.");
       console.error("Logout failed:", error.response?.data?.message || error.message);
     }
   };
 
   return (
     <header className="bg-blue-600 p-4 flex justify-between items-center">
-      {/* Logo & Title */}
       <div className="flex items-center gap-2">
-        <Wallet className="text-white" size={28} /> {/* Wallet Icon */}
+        <Wallet className="text-white" size={28} />
         <h1 className="text-white text-2xl font-bold">Expensify</h1>
       </div>
 
-      {/* Logout Button */}
-      <button
-        onClick={handleLogout}
-        className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-200"
-      >
-        Logout
-      </button>
+      {/* Show Logout button only if authenticated */}
+      {isAuthenticated && (
+        <button
+          onClick={handleLogout}
+          className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-200 cursor-pointer"
+        >
+          Logout
+        </button>
+      )}
     </header>
   );
 };
 
 export default Header;
-

@@ -3,19 +3,17 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import _ from "lodash";
 import { toast } from "react-toastify";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
   flexRender,
-  sortingFns,
   getPaginationRowModel
 
 } from "@tanstack/react-table";
-import NewTransactionForm from "../components/NewTransactionForm";
-import UpdateTransaction from "../components/UpadateTransaction";
+import TransactionForm from "../components/TransactionForm";
 
 const customSortingFns = {
   numeric: (rowA, rowB, columnId) => {
@@ -25,23 +23,19 @@ const customSortingFns = {
   },
 };
 
-const HomePage = () => {
+const HomePage = ({ setIsAuthenticated }) => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [entries, setEntries] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [sorting, setSorting] = useState([])
   const [subcategories, setSubcategories] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0, 
-    pageSize: 10, 
-  });
+  const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
   const [filters, setFilters] = useState({
     type: "",
     startDate: "",
@@ -51,7 +45,6 @@ const HomePage = () => {
     paymentMethod: "",
     search: ""
   });
-  const [showNewEntry, setShowNewEntry] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -72,10 +65,9 @@ const HomePage = () => {
       setIsAuthenticated(true);
     } else {
       setIsAuthenticated(false);
-      navigate("/"); 
+      navigate("/");
     }
   }, []);
-
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -94,44 +86,67 @@ const HomePage = () => {
     fetchFilters();
   }, []);
 
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      if (!filters.category) {
-        setSubcategories([]); 
-        return;
-      }
+  // Function to fetch subcategories based on category ID
+  const fetchSubcategories = async (categoryId) => {
+    if (!categoryId) {
+      setSubcategories([]); 
+      return;
+    }
 
-      try {
-        const response = await axios.get(`http://localhost:5000/api/data/subcategories?category=${filters.category}`);
-        setSubcategories(response.data);
-      } catch (error) {
-        console.error("Error fetching subcategories:", error);
-      }
-    };
-
-    fetchSubcategories();
-  }, [filters.category]); 
-
-  const fetchEntries = async () => {
-    // console.log("Fetching transactions with filters:", filters);
     try {
-      const response = await axios.get("http://localhost:5000/api/transactions", {
-        params: filters,
-        withCredentials: true, // Ensure cookies are sent
-      });
-
-      //console.log("API Response:", response.data);
-      const data = response.data;
-      const transactions = data?.transactions || []; // Default to an empty array if undefined
-      setEntries(transactions);
-      calculateSummary(transactions);
+      const response = await axios.get(`http://localhost:5000/api/data/subcategories/${categoryId}`);
+      
+      setSubcategories(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
-      if (error.response) {
-        console.log("Server Response:", error.response.data);
-      }
+      console.error("Error fetching subcategories:", error);
+      setSubcategories([]); 
     }
   };
+
+  // Effect to fetch subcategories when category filter changes
+  useEffect(() => {
+    if (filters.category) {
+      fetchSubcategories(filters.category);
+    } else {
+      setSubcategories([]); 
+    }
+  }, [filters.category]);
+
+  const handleCategoryChange = (categoryId) => {
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      category: categoryId, 
+      subcategory: "", 
+    }));
+
+    fetchSubcategories(categoryId);
+  };
+
+const fetchEntries = async () => {
+  try {
+    const params = {
+      type: filters.type || "",
+      startDate: filters.startDate || "",
+      endDate: filters.endDate || "",
+      categoryId: filters.category || "",
+      subcategoryId: filters.subcategory || "",
+      paymentMethod: filters.paymentMethod || "",
+      search: filters.search || "",
+    };
+
+    const response = await axios.get("http://localhost:5000/api/transactions", {
+      params, 
+      withCredentials: true, 
+    });
+
+    const transactions = response.data.transactions || [];
+
+    setEntries(transactions);
+    calculateSummary(transactions);
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+  }
+};
 
   const debouncedFetchEntries = _.debounce(fetchEntries, 500);
 
@@ -175,50 +190,23 @@ const HomePage = () => {
     return breakdown;
   };
 
-  // Get formatted data for display
   const monthlyData = getMonthlyBreakdown(entries);
 
   const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+    setFilters((prevFilters) => ({ ...prevFilters, [e.target.name]: e.target.value }));
   };
-
-  const handleCategoryChange = (e) => {
-    const selectedCategory = e.target.value;
-    setFilters({ ...filters, category: selectedCategory, subcategory: "" });
-
-    const selectedCategoryData = categories.find((cat) => cat.name === selectedCategory);
-    // console.log("Selected Category Data:", selectedCategoryData); 
-
-    if (selectedCategoryData && Array.isArray(selectedCategoryData.subcategories)) {
-      setSubcategories(selectedCategoryData.subcategories);
-    } else {
-      setSubcategories([]); // Fallback to empty array
-    }
-  };
-
 
   const handleDelete = async (id) => {
     try {
       await axios.delete(`http://localhost:5000/api/transactions/${id}`,
         { withCredentials: true }
       );
-      setFilters((prevFilters) => ({ ...prevFilters })); // Trigger fetchEntries
+      setFilters((prevFilters) => ({ ...prevFilters })); 
       toast.success("Transaction deleted successfully!");
     } catch (error) {
       console.error("Error deleting transaction:", error);
     }
   };
-
-  const handleEdit = (transaction) => {
-    setSelectedTransaction(transaction); // Store transaction in state
-    setShowEditModal(true); // Show the edit modal
-  };
-
-  const closeEditModal = () => {
-    setShowEditModal(false);
-    setSelectedTransaction(null);
-  };
-
 
   const columns = useMemo(
     () => [
@@ -240,16 +228,16 @@ const HomePage = () => {
       { header: "Description", accessorKey: "description" },
       {
         header: "Actions",
-        id: "actions", // Unique key for the column
+        id: "actions", 
         cell: ({ row }) => {
-          const transaction = row.original; // Get row data
+          const transaction = row.original; 
 
           return (
             <div className="flex gap-2">
               {/* Edit button */}
               <button
                 className="text-yellow-500 hover:text-yellow-600 p-1 rounded cursor-pointer"
-                onClick={() => handleEdit(transaction)}
+                onClick={() => handleEditTransaction(transaction)}
               >
                 <Pencil size={18} />
               </button>
@@ -269,10 +257,45 @@ const HomePage = () => {
     []
   );
 
-  const handleTransactionAdded = (newTransaction) => {
-    setEntries((prevEntries) => [newTransaction, ...prevEntries]); // Add new transaction to the top
-    calculateSummary([newTransaction, ...entries]); // Update summary
+
+  const resetFilters = () => ({
+    type: "",
+    startDate: "",
+    endDate: "",
+    category: "",
+    subcategory: "",
+    paymentMethod: "",
+    search: ""
+  });
+
+  const handleTransactionForm = (transaction = null) => {
+    setFilters(resetFilters());  
+    setSelectedTransaction(transaction); 
+    setIsEditMode(!!transaction); 
+    setShowTransactionForm(true); 
   };
+
+  const handleAddTransaction = () => handleTransactionForm();
+  const handleEditTransaction = (transaction) => handleTransactionForm(transaction);
+
+
+
+  const handleTransactionSuccess = (updatedTransaction) => {
+    if (isEditMode) {
+      setEntries((prevEntries) =>
+        prevEntries.map((entry) =>
+          entry._id === updatedTransaction._id ? updatedTransaction : entry
+        )
+      );
+    } else {
+      setEntries((prevEntries) => [updatedTransaction, ...prevEntries]);
+    }
+    setFilters((prevFilters) => ({ ...prevFilters }));
+    
+    setShowTransactionForm(false); 
+    
+  };
+
 
   const table = useReactTable({
     data: entries,
@@ -363,17 +386,19 @@ const HomePage = () => {
             {/* Category Filter */}
             <select
               name="category"
-              value={filters.category}
-              onChange={handleCategoryChange}
+              value={filters.category} // Ensuring correct filtering state
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="border p-2 rounded outline-none w-full"
             >
               <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.name} value={cat.name}>
-                  {cat.name}
+              {categories.map(category => (
+                <option key={category._id} value={category._id}>
+                  {category.name}
                 </option>
               ))}
             </select>
+
+
 
             {/* Subcategory Filter */}
             <select
@@ -383,10 +408,8 @@ const HomePage = () => {
               className="border p-2 rounded outline-none w-full"
             >
               <option value="">All Subcategories</option>
-              {subcategories.map((sub) => (
-                <option key={sub.name} value={sub.name}>
-                  {sub.name}
-                </option>
+              {subcategories.map(subcategory => (
+                <option key={subcategory._id} value={subcategory._id}>{subcategory.name}</option>
               ))}
             </select>
 
@@ -405,7 +428,7 @@ const HomePage = () => {
               ))}
             </select>
           </div>
-          
+
 
           <div className="flex flex-col md:flex-row gap-4">
             {/* Start Date */}
@@ -447,13 +470,22 @@ const HomePage = () => {
 
         <div className="flex justify-end">
           <button
-            className="mt-4 bg-blue-500 text-white px-4 py-2 rounded cursor-pointer"
-            onClick={() => setShowNewEntry(true)}
+            className="mt-4 bg-blue-500 text-white px-4 py-2 rounded flex items-center gap-2 cursor-pointer"
+            onClick={handleAddTransaction}
           >
-            Add New Entry
+            <Plus size={20} strokeWidth={3} /> {/* Bold "+" Icon */}
+            <span className="font-semibold">Add New Entry</span>
           </button>
         </div>
-        {showNewEntry && <NewTransactionForm onClose={() => setShowNewEntry(false)} onTransactionAdded={handleTransactionAdded} />}
+        {/* Show Transaction Form Modal */}
+        {showTransactionForm && (
+          <TransactionForm
+            transaction={selectedTransaction}
+            isEditMode={isEditMode}
+            onClose={() => setShowTransactionForm(false)}
+            onSuccess={handleTransactionSuccess}
+          />
+        )}
 
         {/* Transactions Table */}
 
@@ -508,19 +540,15 @@ const HomePage = () => {
               )}
             </tbody>
           </table>
-          {showEditModal && selectedTransaction && (
-            <UpdateTransaction
-              transaction={selectedTransaction}
-              onClose={closeEditModal} // Function to close the modal
-              onUpdate={(updatedTransaction) => {
-                setEntries((prevEntries) =>
-                  prevEntries.map((entry) =>
-                    entry._id === updatedTransaction._id ? updatedTransaction : entry
-                  )
-                );
-              }}
+          {showTransactionForm && (
+            <TransactionForm
+              transaction={selectedTransaction} // Pass existing transaction if editing
+              isEditMode={isEditMode}           // Determine if it's "Add" or "Edit" mode
+              onClose={() => setShowTransactionForm(false)} // Close modal
+              onSuccess={handleTransactionSuccess} // Callback after add/edit success
             />
           )}
+
           <div className="flex items-center justify-center gap-2 mt-4">
             {/* First Page Button */}
             <button

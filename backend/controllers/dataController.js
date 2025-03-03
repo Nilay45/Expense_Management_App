@@ -1,39 +1,35 @@
+import asyncHandler from "express-async-handler";
 import Category from "../models/Category.js";
 import PaymentMethod from "../models/PaymentMethod.js";
+import Subcategory from "../models/SubCategory.js";
+import mongoose from "mongoose";
+import { ErrorHandler } from "../utils/errorHandler.js";
 
 // Get all categories
-export const getCategories = async (req, res) => {
-  try {
-    const categories = await Category.find({}, { name: 1, type: 1, _id: 1 });
-    res.json(categories);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching categories", error });
-  }
-};
+export const getCategories = asyncHandler(async (req, res) => {
+    const categories = await Category.find();
+    res.status(200).json(categories);
+});
 
-// Get subcategories based on a category
-export const getSubcategories = async (req, res) => {
-  try {
-    const { category } = req.query;
-    if (!category) {
-      return res.status(400).json({ message: "Category is required" });
+// Get subcategories by category ID
+export const getSubCategoryByCategoryId = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new ErrorHandler("Invalid Category ID", 400);
     }
-    const categoryData = await Category.findOne({ name: category });
-    if (!categoryData) {
-      return res.status(404).json({ message: "Category not found" });
+
+    const subcategories = await Subcategory.find({ categories: id }).populate("categories");
+
+    if (!subcategories.length) {
+        throw new ErrorHandler("No subcategories found for this category", 404);
     }
-    res.json(categoryData.subcategories);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching subcategories", error });
-  }
-};
+
+    res.status(200).json(subcategories);
+});
 
 // Get all payment methods
-export const getPaymentMethods = async (req, res) => {
-  try {
-    const paymentMethods = await PaymentMethod.find({}, { name: 1, type: 1, _id: 1 });
-    res.json(paymentMethods);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching payment methods", error });
-  }
-};
+export const getPaymentMethods = asyncHandler(async (req, res) => {
+    const paymentMethods = await PaymentMethod.find();
+    res.status(200).json(paymentMethods);
+});

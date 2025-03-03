@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+const { Schema } = mongoose;
 
 const transactionSchema = new mongoose.Schema(
   {
@@ -10,14 +11,6 @@ const transactionSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: ["Income", "Expense"],
-      required: true,
-    },
-    category: {
-      type: String,
-      required: true,
-    },
-    subcategory: {
-      type: String,
       required: true,
     },
     amount: {
@@ -32,6 +25,17 @@ const transactionSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+
+    subcategoryId: {
+      type: Schema.Types.ObjectId, 
+      ref: "Subcategory",
+    },
+
+    categoryId: {
+      type: Schema.Types.ObjectId, 
+      ref: "Category",
+    },
+    
     description: {
       type: String,
       default: "",
