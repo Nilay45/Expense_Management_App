@@ -208,6 +208,42 @@ const fetchEntries = async () => {
     }
   };
 
+  const resetFilters = () => ({
+    type: "",
+    startDate: "",
+    endDate: "",
+    category: "",
+    subcategory: "",
+    paymentMethod: "",
+    search: ""
+  });
+
+  const handleTransactionForm = (transaction = null) => {
+    setFilters(resetFilters());  
+    setSelectedTransaction(transaction); 
+    setIsEditMode(!!transaction); 
+    setShowTransactionForm(true); 
+  };
+
+  const handleAddTransaction = () => handleTransactionForm();
+  const handleEditTransaction = (transaction) => handleTransactionForm(transaction);
+
+  const handleTransactionSuccess = (updatedTransaction) => {
+    if (isEditMode) {
+      setEntries((prevEntries) =>
+        prevEntries.map((entry) =>
+          entry._id === updatedTransaction._id ? updatedTransaction : entry
+        )
+      );
+    } else {
+      setEntries((prevEntries) => [updatedTransaction, ...prevEntries]);
+    }
+    setFilters((prevFilters) => ({ ...prevFilters }));
+    
+    setShowTransactionForm(false); 
+    
+  };
+
   const columns = useMemo(
     () => [
       { header: "Category", accessorKey: "category" },
@@ -256,45 +292,6 @@ const fetchEntries = async () => {
     ],
     []
   );
-
-
-  const resetFilters = () => ({
-    type: "",
-    startDate: "",
-    endDate: "",
-    category: "",
-    subcategory: "",
-    paymentMethod: "",
-    search: ""
-  });
-
-  const handleTransactionForm = (transaction = null) => {
-    setFilters(resetFilters());  
-    setSelectedTransaction(transaction); 
-    setIsEditMode(!!transaction); 
-    setShowTransactionForm(true); 
-  };
-
-  const handleAddTransaction = () => handleTransactionForm();
-  const handleEditTransaction = (transaction) => handleTransactionForm(transaction);
-
-
-
-  const handleTransactionSuccess = (updatedTransaction) => {
-    if (isEditMode) {
-      setEntries((prevEntries) =>
-        prevEntries.map((entry) =>
-          entry._id === updatedTransaction._id ? updatedTransaction : entry
-        )
-      );
-    } else {
-      setEntries((prevEntries) => [updatedTransaction, ...prevEntries]);
-    }
-    setFilters((prevFilters) => ({ ...prevFilters }));
-    
-    setShowTransactionForm(false); 
-    
-  };
 
 
   const table = useReactTable({
@@ -460,7 +457,7 @@ const fetchEntries = async () => {
                 type="text"
                 placeholder="Search by description"
                 value={filters.search}
-                onChange={handleInputChange} // Call debounced function
+                onChange={handleInputChange} 
                 className="border p-2 rounded outline-none w-full"
               />
             </div>
@@ -542,10 +539,10 @@ const fetchEntries = async () => {
           </table>
           {showTransactionForm && (
             <TransactionForm
-              transaction={selectedTransaction} // Pass existing transaction if editing
-              isEditMode={isEditMode}           // Determine if it's "Add" or "Edit" mode
-              onClose={() => setShowTransactionForm(false)} // Close modal
-              onSuccess={handleTransactionSuccess} // Callback after add/edit success
+              transaction={selectedTransaction} 
+              isEditMode={isEditMode}           
+              onClose={() => setShowTransactionForm(false)} 
+              onSuccess={handleTransactionSuccess} 
             />
           )}
 

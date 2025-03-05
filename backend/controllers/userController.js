@@ -39,7 +39,8 @@ export const logout = (req, res) => {
     res.status(200)
         .clearCookie("token", {
             httpOnly: true, 
-            secure: process.env.NODE_ENV !== "development", 
+            sameSite: process.env.NODE_ENV === "Development" ? "lax" : "none",
+            secure: process.env.NODE_ENV === "Development" ? false : true,
         })
         .json({
             success: true,
