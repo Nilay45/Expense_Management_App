@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { server } from "../main";
 
 const AuthPage = ({ setIsAuthenticated }) => {  
   const [name, setName] = useState("");
@@ -32,8 +33,8 @@ const AuthPage = ({ setIsAuthenticated }) => {
 
     try {
       const endpoint = isLogin
-        ? "http://localhost:5000/api/users/login"
-        : "http://localhost:5000/api/users/new";
+        ? `${server}/users/login`
+        : `${server}/users/new`;
 
       const payload = isLogin ? { email, password } : { name, email, password };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { server } from "../main";
 
 const TransactionForm = ({ transaction, onClose, onSuccess, isEditMode }) => {
     const [categories, setCategories] = useState([]);
@@ -22,8 +23,9 @@ const TransactionForm = ({ transaction, onClose, onSuccess, isEditMode }) => {
         const fetchFields = async () => {
             try {
                 const [categoriesRes, paymentMethodsRes] = await Promise.all([
-                    axios.get("http://localhost:5000/api/data/categories"),
-                    axios.get("http://localhost:5000/api/data/payment-methods"),
+                    axios.get(`${server}/data/categories`),
+                    axios.get(`${server}/data/payment-methods`),
+                    // `${server}/users/login`,
                 ]);
                 setCategories(categoriesRes.data);
                 setPaymentMethods(paymentMethodsRes.data);
@@ -44,7 +46,7 @@ const TransactionForm = ({ transaction, onClose, onSuccess, isEditMode }) => {
         }
         try {
             const response = await axios.get(
-                `http://localhost:5000/api/data/subcategories/${formData.category}`
+                `${server}/data/subcategories/${formData.category}`
             );
             setSubcategories(response.data);
         } catch (error) {
@@ -109,14 +111,14 @@ const TransactionForm = ({ transaction, onClose, onSuccess, isEditMode }) => {
             let response;
             if (isEditMode) {
                 response = await axios.put(
-                    `http://localhost:5000/api/transactions/${transaction._id}`,
+                    `${server}/transactions/${transaction._id}`,
                     formData,
                     { withCredentials: true }
                 );
                 toast.success("Transaction updated successfully!");
             } else {
                 response = await axios.post(
-                    "http://localhost:5000/api/transactions/add",
+                    `${server}/transactions/add`,
                     formData,
                     { withCredentials: true }
                 );

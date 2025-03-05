@@ -14,6 +14,7 @@ import {
 
 } from "@tanstack/react-table";
 import TransactionForm from "../components/TransactionForm";
+import { server } from "../main";
 
 const customSortingFns = {
   numeric: (rowA, rowB, columnId) => {
@@ -49,7 +50,7 @@ const HomePage = ({ setIsAuthenticated }) => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/users/me", { withCredentials: true });
+        const response = await axios.get(`${server}/users/me`, { withCredentials: true });
         setName(response.data.user.name);
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -73,8 +74,8 @@ const HomePage = ({ setIsAuthenticated }) => {
     const fetchFilters = async () => {
       try {
         const [categoriesRes, paymentMethodsRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/data/categories"),
-          axios.get("http://localhost:5000/api/data/payment-methods"),
+          axios.get(`${server}/data/categories`),
+          axios.get(`${server}/data/payment-methods`),
         ]);
         setCategories(categoriesRes.data);
         setPaymentMethods(paymentMethodsRes.data);
@@ -89,17 +90,17 @@ const HomePage = ({ setIsAuthenticated }) => {
   // Function to fetch subcategories based on category ID
   const fetchSubcategories = async (categoryId) => {
     if (!categoryId) {
-      setSubcategories([]); 
+      setSubcategories([]);
       return;
     }
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/data/subcategories/${categoryId}`);
-      
+      const response = await axios.get(`${server}/data/subcategories/${formData.category}`);
+
       setSubcategories(response.data);
     } catch (error) {
       console.error("Error fetching subcategories:", error);
-      setSubcategories([]); 
+      setSubcategories([]);
     }
   };
 
@@ -108,45 +109,45 @@ const HomePage = ({ setIsAuthenticated }) => {
     if (filters.category) {
       fetchSubcategories(filters.category);
     } else {
-      setSubcategories([]); 
+      setSubcategories([]);
     }
   }, [filters.category]);
 
   const handleCategoryChange = (categoryId) => {
     setFilters((prevFilters) => ({
       ...prevFilters,
-      category: categoryId, 
-      subcategory: "", 
+      category: categoryId,
+      subcategory: "",
     }));
 
     fetchSubcategories(categoryId);
   };
 
-const fetchEntries = async () => {
-  try {
-    const params = {
-      type: filters.type || "",
-      startDate: filters.startDate || "",
-      endDate: filters.endDate || "",
-      categoryId: filters.category || "",
-      subcategoryId: filters.subcategory || "",
-      paymentMethod: filters.paymentMethod || "",
-      search: filters.search || "",
-    };
+  const fetchEntries = async () => {
+    try {
+      const params = {
+        type: filters.type || "",
+        startDate: filters.startDate || "",
+        endDate: filters.endDate || "",
+        categoryId: filters.category || "",
+        subcategoryId: filters.subcategory || "",
+        paymentMethod: filters.paymentMethod || "",
+        search: filters.search || "",
+      };
 
-    const response = await axios.get("http://localhost:5000/api/transactions", {
-      params, 
-      withCredentials: true, 
-    });
+      const response = await axios.get(`${server}/transactions`, {
+        params,
+        withCredentials: true,
+      });
 
-    const transactions = response.data.transactions || [];
+      const transactions = response.data.transactions || [];
 
-    setEntries(transactions);
-    calculateSummary(transactions);
-  } catch (error) {
-    console.error("Error fetching transactions:", error);
-  }
-};
+      setEntries(transactions);
+      calculateSummary(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    }
+  };
 
   const debouncedFetchEntries = _.debounce(fetchEntries, 500);
 
@@ -198,10 +199,10 @@ const fetchEntries = async () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/transactions/${id}`,
+      await axios.delete(`${server}/transactions/${id}`,
         { withCredentials: true }
       );
-      setFilters((prevFilters) => ({ ...prevFilters })); 
+      setFilters((prevFilters) => ({ ...prevFilters }));
       toast.success("Transaction deleted successfully!");
     } catch (error) {
       console.error("Error deleting transaction:", error);
@@ -219,10 +220,10 @@ const fetchEntries = async () => {
   });
 
   const handleTransactionForm = (transaction = null) => {
-    setFilters(resetFilters());  
-    setSelectedTransaction(transaction); 
-    setIsEditMode(!!transaction); 
-    setShowTransactionForm(true); 
+    setFilters(resetFilters());
+    setSelectedTransaction(transaction);
+    setIsEditMode(!!transaction);
+    setShowTransactionForm(true);
   };
 
   const handleAddTransaction = () => handleTransactionForm();
@@ -239,9 +240,9 @@ const fetchEntries = async () => {
       setEntries((prevEntries) => [updatedTransaction, ...prevEntries]);
     }
     setFilters((prevFilters) => ({ ...prevFilters }));
-    
-    setShowTransactionForm(false); 
-    
+
+    setShowTransactionForm(false);
+
   };
 
   const columns = useMemo(
@@ -264,9 +265,9 @@ const fetchEntries = async () => {
       { header: "Description", accessorKey: "description" },
       {
         header: "Actions",
-        id: "actions", 
+        id: "actions",
         cell: ({ row }) => {
-          const transaction = row.original; 
+          const transaction = row.original;
 
           return (
             <div className="flex gap-2">
@@ -457,7 +458,7 @@ const fetchEntries = async () => {
                 type="text"
                 placeholder="Search by description"
                 value={filters.search}
-                onChange={handleInputChange} 
+                onChange={handleInputChange}
                 className="border p-2 rounded outline-none w-full"
               />
             </div>
@@ -539,10 +540,10 @@ const fetchEntries = async () => {
           </table>
           {showTransactionForm && (
             <TransactionForm
-              transaction={selectedTransaction} 
-              isEditMode={isEditMode}           
-              onClose={() => setShowTransactionForm(false)} 
-              onSuccess={handleTransactionSuccess} 
+              transaction={selectedTransaction}
+              isEditMode={isEditMode}
+              onClose={() => setShowTransactionForm(false)}
+              onSuccess={handleTransactionSuccess}
             />
           )}
 
