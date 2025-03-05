@@ -2,7 +2,7 @@ import asyncHandler from "express-async-handler";
 import Transaction from "../models/Transaction.js";
 import mongoose from "mongoose";
 import Category from "../models/Category.js";
-import Subcategory from "../models/SubCategory.js";
+import Subcategory from "../models/Subcategory.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
