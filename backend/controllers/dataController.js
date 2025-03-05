@@ -1,7 +1,7 @@
 import asyncHandler from "express-async-handler";
 import Category from "../models/Category.js";
 import PaymentMethod from "../models/PaymentMethod.js";
-import Subcategory from "../models/SubCategory.js";
+import Subcategory from "../models/Subcategory.js";
 import mongoose from "mongoose";
 import { ErrorHandler } from "../utils/errorHandler.js";
 
